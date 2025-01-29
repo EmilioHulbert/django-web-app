@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.views import View
 from django.utils.decorators import  method_decorator
 from .forms import UserForm, LocationForm, ProfileForm
+from main.models import Listing
 # from http.client import HTTPResponse
 # from django.http import HttpResponse
 
@@ -28,7 +29,7 @@ def login_view(request):
                 return redirect('home') #redirected from automax settings.py file LOGIN_URL LOGIN_REDIRECT_URL
                 
             else:
-                messages.error(request, f'Error occured trying to login')
+                messages.error(request, f'An Error occured trying to login')
             
         else:
             messages.error(request, f'An Error occured trying to login')
@@ -70,9 +71,27 @@ class RegisterView(View):
 class ProfileView(View):
 
     def get(self, request):
+        # Listing.objects.get()
+        user_listings = Listing.objects.filter(seller=request.user.profile)
         user_form = UserForm(instance=request.user)
-        profile_form = ProfileForm(request.user.profile)
-        location_form = LocationForm()
+        profile_form = ProfileForm(instance=request.user.profile)
+        location_form = LocationForm(instance=request.user.profile.location)
         return render(request, 'views/profile.html', {'user_form': user_form,
          'profile_form': profile_form,
-         'location_form': location_form})
+         'location_form': location_form, 'user_listings': user_listings})
+
+    def post(self, request):
+            user_listings = Listing.objects.filter(seller=request.user.profile)
+            user_form = UserForm(request.POST, instance=request.user)
+            profile_form = ProfileForm(request.POST, request.FILES, instance=request.user.profile)
+            location_form = LocationForm(request.POST, instance=request.user.profile.location)
+            if user_form.is_valid() and profile_form.is_valid() and location_form.is_valid():
+                user_form.save()
+                profile_form.save()
+                location_form.save()
+                messages.success(request, 'Profile Updated SUccessfully!')
+            else:
+                messages.error(request, 'Error Updating Profile!')
+            return render(request, 'views/profile.html', {'user_form': user_form,
+         'profile_form': profile_form,
+         'location_form': location_form, 'user_listings': user_listings})
